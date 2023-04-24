@@ -1,5 +1,5 @@
 {
-    "name": "universetech/phpunit-merger",
+    "name": "universetech-inc/phpunit-merger",
     "description": "Merge multiple PHPUnit reports into one file",
     "keywords": [
         "PHPUnit",
