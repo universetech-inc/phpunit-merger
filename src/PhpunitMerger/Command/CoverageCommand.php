@@ -6,9 +6,11 @@ namespace Nimut\PhpunitMerger\Command;
 
 use SebastianBergmann\CodeCoverage\CodeCoverage;
 use SebastianBergmann\CodeCoverage\Driver\Driver;
-use SebastianBergmann\CodeCoverage\Filter as CodeCoverageFilter;
+use SebastianBergmann\CodeCoverage\Driver\Selector;
+use SebastianBergmann\CodeCoverage\Filter;
 use SebastianBergmann\CodeCoverage\Report\Clover;
 use SebastianBergmann\CodeCoverage\Report\Html\Facade;
+use SebastianBergmann\CodeCoverage\Report\Thresholds;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -52,7 +54,7 @@ class CoverageCommand extends Command
             );
     }
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $finder = new Finder();
         $finder->files()
@@ -82,14 +84,15 @@ class CoverageCommand extends Command
 
     private function getCodeCoverage()
     {
-        $driver = null;
-        $filter = null;
+        $filter = new Filter();
+
         if (method_exists(Driver::class, 'forLineCoverage')) {
-            $filter = new CodeCoverageFilter();
             $driver = Driver::forLineCoverage($filter);
+
+            return new CodeCoverage($driver, $filter);
         }
 
-        return new CodeCoverage($driver, $filter);
+        return new CodeCoverage((new Selector())->forLineCoverage($filter), $filter);
     }
 
     private function normalizeCoverage(CodeCoverage $coverage)
@@ -112,7 +115,12 @@ class CoverageCommand extends Command
 
     private function writeHtmlReport(CodeCoverage $codeCoverage, string $destination, int $lowUpperBound, int $highLowerBound)
     {
-        $writer = new Facade($lowUpperBound, $highLowerBound);
+        if (class_exists('SebastianBergmann\\CodeCoverage\\Report\\Thresholds')) {
+            $writer = new Facade('', null, Thresholds::from($lowUpperBound, $highLowerBound));
+        } else {
+            $writer = new Facade($lowUpperBound, $highLowerBound);
+        }
+
         $writer->process($codeCoverage, $destination);
     }
 }
